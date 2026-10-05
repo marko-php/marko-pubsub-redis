@@ -11,6 +11,8 @@ use function Amp\Redis\createRedisClient;
 use function Amp\Redis\createRedisConnector;
 
 use Amp\Redis\RedisClient;
+use Amp\Redis\RedisConfig;
+use Amp\Redis\RedisException;
 
 class RedisPubSubConnection
 {
@@ -26,6 +28,9 @@ class RedisPubSubConnection
         public readonly string $prefix = 'marko:',
     ) {}
 
+    /**
+     * @throws RedisException
+     */
     public function client(): RedisClient
     {
         if ($this->client === null) {
@@ -35,6 +40,9 @@ class RedisPubSubConnection
         return $this->client;
     }
 
+    /**
+     * @throws RedisException
+     */
     public function connector(): RedisConnector
     {
         if ($this->connector === null) {
@@ -55,13 +63,34 @@ class RedisPubSubConnection
         return $this->client !== null;
     }
 
+    /**
+     * @throws RedisException
+     */
     protected function createClient(): RedisClient
     {
-        return createRedisClient("tcp://$this->host:$this->port");
+        return createRedisClient($this->redisConfig());
     }
 
+    /**
+     * @throws RedisException
+     */
     protected function createConnector(): RedisConnector
     {
-        return createRedisConnector("tcp://$this->host:$this->port");
+        return createRedisConnector($this->redisConfig());
+    }
+
+    /**
+     * @throws RedisException
+     */
+    protected function redisConfig(): RedisConfig
+    {
+        $config = RedisConfig::fromUri("tcp://$this->host:$this->port")
+            ->withDatabase($this->database);
+
+        if ($this->password !== null) {
+            $config = $config->withPassword($this->password);
+        }
+
+        return $config;
     }
 }

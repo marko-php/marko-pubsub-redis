@@ -50,16 +50,7 @@ foreach ($subscription as $message) {
 }
 ```
 
-Configure the Redis connection in `config/pubsub-redis.php`:
-
-```php
-return [
-    'host'     => '127.0.0.1',
-    'port'     => 6379,
-    'password' => null,
-    'database' => 0,
-];
-```
+The module binding builds a shared `RedisPubSubConnection` from `config/pubsub-redis.php` (`PUBSUB_REDIS_HOST`, `PUBSUB_REDIS_PORT`, `PUBSUB_REDIS_PASSWORD`, `PUBSUB_REDIS_DATABASE`). The channel prefix comes from `pubsub.prefix` (`PUBSUB_PREFIX`).
 
 ## API Reference
 
