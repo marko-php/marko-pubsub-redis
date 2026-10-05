@@ -10,16 +10,26 @@ use Marko\Core\Container\Container;
 use Marko\PubSub\Redis\RedisPubSubConnection;
 use Marko\Testing\Fake\FakeConfigRepository;
 
-function createPubSubRedisContainer(): Container
-{
-    $container = new Container();
-    $container->instance(ConfigRepositoryInterface::class, new FakeConfigRepository([
+/**
+ * @param list<string> $without Config keys to leave out
+ */
+function createPubSubRedisContainer(
+    array $without = [],
+): Container {
+    $config = [
         'pubsub.prefix' => 'app:',
         'pubsub-redis.host' => 'redis.internal',
         'pubsub-redis.port' => 6380,
         'pubsub-redis.password' => 'secret',
         'pubsub-redis.database' => 4,
-    ]));
+    ];
+
+    foreach ($without as $key) {
+        unset($config[$key]);
+    }
+
+    $container = new Container();
+    $container->instance(ConfigRepositoryInterface::class, new FakeConfigRepository($config));
 
     $module = require dirname(__DIR__) . '/module.php';
 
@@ -43,6 +53,13 @@ describe('pubsub-redis module bindings', function (): void {
             ->and($connection->port)->toBe(6380)
             ->and($connection->password)->toBe('secret')
             ->and($connection->database)->toBe(4);
+    });
+
+    it('treats a pubsub-redis password removed by a null app override as no password', function (): void {
+        $connection = createPubSubRedisContainer(without: ['pubsub-redis.password'])
+            ->get(RedisPubSubConnection::class);
+
+        expect($connection->password)->toBeNull();
     });
 
     it('takes the connection prefix from pubsub.prefix', function (): void {
