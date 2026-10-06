@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Marko\Config\Env;
+
 return [
-    'host' => $_ENV['PUBSUB_REDIS_HOST'] ?? '127.0.0.1',
-    'port' => (int) ($_ENV['PUBSUB_REDIS_PORT'] ?? 6379),
-    'password' => $_ENV['PUBSUB_REDIS_PASSWORD'] ?? null,
-    'database' => (int) ($_ENV['PUBSUB_REDIS_DATABASE'] ?? 0),
+    'host' => Env::string('PUBSUB_REDIS_HOST', '127.0.0.1'),
+    'port' => Env::int('PUBSUB_REDIS_PORT', 6379, min: 1, max: 65535),
+    'password' => Env::nullableString('PUBSUB_REDIS_PASSWORD'),
+    'database' => Env::int('PUBSUB_REDIS_DATABASE', 0, min: 0),
 ];
