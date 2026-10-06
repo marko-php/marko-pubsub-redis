@@ -26,6 +26,7 @@ return [
                 password: $password === null || $password === '' ? null : (string) $password,
                 database: $config->getInt(key: 'pubsub-redis.database'),
                 prefix: $config->getString(key: 'pubsub.prefix'),
+                scheme: $config->getString(key: 'pubsub-redis.scheme'),
             );
         },
     ],

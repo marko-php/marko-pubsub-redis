@@ -24,6 +24,7 @@ function createPubSubRedisContainer(
         'pubsub-redis.port' => 6380,
         'pubsub-redis.password' => 'secret',
         'pubsub-redis.database' => 4,
+        'pubsub-redis.scheme' => 'tls',
     ];
 
     foreach ($without as $key) {
@@ -54,7 +55,14 @@ describe('pubsub-redis module bindings', function (): void {
             ->and($connection->host)->toBe('redis.internal')
             ->and($connection->port)->toBe(6380)
             ->and($connection->password)->toBe('secret')
-            ->and($connection->database)->toBe(4);
+            ->and($connection->database)->toBe(4)
+            ->and($connection->scheme)->toBe('tls');
+    });
+
+    it('ships tcp as the default pubsub-redis.scheme', function (): void {
+        $config = require dirname(__DIR__) . '/config/pubsub-redis.php';
+
+        expect($config['scheme'])->toBe('tcp');
     });
 
     it('treats a pubsub-redis password removed by a null app override as no password', function (): void {

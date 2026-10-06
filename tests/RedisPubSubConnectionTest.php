@@ -6,8 +6,10 @@ use Amp\Cancellation;
 use Amp\Redis\Connection\RedisConnection;
 use Amp\Redis\Connection\RedisConnector;
 use Amp\Redis\Connection\RedisLink;
+use Amp\Redis\Connection\SocketRedisConnector;
 use Amp\Redis\Protocol\RedisResponse;
 use Amp\Redis\RedisClient;
+use Marko\PubSub\Exceptions\PubSubException;
 use Marko\PubSub\Redis\RedisPubSubConnection;
 
 readonly class StubRedisResponse implements RedisResponse
@@ -121,4 +123,44 @@ it('provides disconnect and isConnected methods', function (): void {
     $connection->disconnect();
 
     expect($connection->isConnected())->toBeFalse();
+});
+
+function createSchemeExposingConnection(
+    string $scheme,
+): RedisPubSubConnection {
+    return new class ($scheme) extends RedisPubSubConnection
+    {
+        public function __construct(
+            string $scheme,
+        ) {
+            parent::__construct(host: 'redis.example.com', port: 6380, scheme: $scheme);
+        }
+
+        public function exposedSocketRedisConnector(): ?RedisConnector
+        {
+            return $this->socketRedisConnector();
+        }
+    };
+}
+
+it('defaults to the plain tcp scheme', function (): void {
+    $connection = createSchemeExposingConnection('tcp');
+
+    expect(new RedisPubSubConnection()->scheme)->toBe('tcp')
+        ->and($connection->exposedSocketRedisConnector())->toBeNull();
+});
+
+it('connects through a TLS socket connector for the tls scheme', function (): void {
+    $connection = createSchemeExposingConnection('tls');
+
+    expect($connection->scheme)->toBe('tls')
+        ->and($connection->exposedSocketRedisConnector())->toBeInstanceOf(SocketRedisConnector::class);
+});
+
+it('throws a PubSubException for an unknown scheme', function (): void {
+    expect(fn () => new RedisPubSubConnection(scheme: 'rediss'))
+        ->toThrow(
+            PubSubException::class,
+            "Invalid value 'rediss' for pub/sub connection option 'pubsub-redis.scheme'",
+        );
 });
