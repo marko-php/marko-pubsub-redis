@@ -26,6 +26,8 @@ class SpyAmphpRedisSubscriber implements AmphpRedisSubscriberInterface
     /** @var array<int, string> */
     public array $subscribedPatterns = [];
 
+    public int $createCount = 0;
+
     /**
      * @param array<string, AmphpRedisSubscription> $channelSubscriptions
      * @param array<string, AmphpRedisSubscription> $patternSubscriptions
@@ -68,6 +70,8 @@ readonly class TestableRedisSubscriber extends RedisSubscriber
 
     protected function createAmphpSubscriber(): AmphpRedisSubscriberInterface
     {
+        $this->spy->createCount++;
+
         return $this->spy;
     }
 }
@@ -141,4 +145,38 @@ it('subscribes a redis pattern subscription to every requested pattern', functio
 
     expect($subscription)->toBeInstanceOf(Subscription::class)
         ->and($subscriber->spy->subscribedPatterns)->toBe(['app:orders:*', 'app:events:*']);
+});
+
+it('creates the amphp subscriber once across many subscribe calls', function (): void {
+    $subscriber = createTestableRedisSubscriber(prefix: 'app:');
+
+    for ($i = 1; $i <= 25; $i++) {
+        $subscriber->subscribe("user.$i");
+    }
+
+    expect($subscriber->spy->createCount)->toBe(1)
+        ->and($subscriber->spy->subscribedChannels)->toHaveCount(25);
+});
+
+it('creates the amphp subscriber once across subscribe and psubscribe calls', function (): void {
+    $subscriber = createTestableRedisSubscriber(prefix: 'app:');
+
+    $subscriber->subscribe('orders');
+    $subscriber->psubscribe('events:*');
+    $subscriber->subscribe('alerts', 'notifications');
+    $subscriber->psubscribe('users:*');
+
+    expect($subscriber->spy->createCount)->toBe(1)
+        ->and($subscriber->spy->subscribedChannels)->toBe(['app:orders', 'app:alerts', 'app:notifications'])
+        ->and($subscriber->spy->subscribedPatterns)->toBe(['app:events:*', 'app:users:*']);
+});
+
+it('does not create the amphp subscriber until the first subscription', function (): void {
+    $subscriber = createTestableRedisSubscriber();
+
+    expect($subscriber->spy->createCount)->toBe(0);
+
+    $subscriber->subscribe('orders');
+
+    expect($subscriber->spy->createCount)->toBe(1);
 });

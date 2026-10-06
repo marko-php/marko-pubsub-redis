@@ -7,7 +7,9 @@ namespace Marko\PubSub\Redis\Tests;
 use Amp\Redis\RedisConfig;
 use Marko\Config\ConfigRepositoryInterface;
 use Marko\Core\Container\Container;
+use Marko\PubSub\Redis\Driver\RedisSubscriber;
 use Marko\PubSub\Redis\RedisPubSubConnection;
+use Marko\PubSub\SubscriberInterface;
 use Marko\Testing\Fake\FakeConfigRepository;
 
 /**
@@ -73,6 +75,19 @@ describe('pubsub-redis module bindings', function (): void {
 
         expect($container->get(RedisPubSubConnection::class))
             ->toBe($container->get(RedisPubSubConnection::class));
+    });
+
+    it('resolves SubscriberInterface to RedisSubscriber', function (): void {
+        expect(createPubSubRedisContainer()->get(SubscriberInterface::class))
+            ->toBeInstanceOf(RedisSubscriber::class);
+    });
+
+    it('resolves the same SubscriberInterface instance twice', function (): void {
+        $container = createPubSubRedisContainer();
+
+        // One subscriber per process means one Redis connection for every subscription
+        expect($container->get(SubscriberInterface::class))
+            ->toBe($container->get(SubscriberInterface::class));
     });
 
     it('builds a redis config carrying host, port, password and database', function (): void {

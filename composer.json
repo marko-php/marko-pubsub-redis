@@ -5,6 +5,7 @@
     "type": "marko-module",
     "require": {
         "php": "^8.5",
+        "amphp/pipeline": "^1",
         "amphp/redis": "^2.0",
         "marko/core": "self.version",
         "marko/config": "self.version",

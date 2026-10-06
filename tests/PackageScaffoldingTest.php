@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-it('creates README.md for marko/pubsub-redis with all required sections', function (): void {
+it('has a README with installation, quick example and docs link', function (): void {
     $readme = file_get_contents(dirname(__DIR__) . '/README.md');
 
-    expect($readme)
-        ->toContain('## Overview')
-        ->and($readme)->toContain('## Installation')
-        ->and($readme)->toContain('## Usage')
-        ->and($readme)->toContain('## API Reference');
+    expect($readme)->toStartWith("# marko/pubsub-redis\n")
+        ->toContain("## Installation\n")
+        ->toContain('composer require marko/pubsub-redis')
+        ->toContain("## Quick Example\n")
+        ->toContain('https://marko.build/docs/packages/pubsub-redis/');
 });
 
 it(

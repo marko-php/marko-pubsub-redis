@@ -31,5 +31,7 @@ return [
     ],
     'singletons' => [
         RedisPubSubConnection::class,
+        // One subscriber per process: all of its subscriptions share one Redis connection
+        SubscriberInterface::class,
     ],
 ];

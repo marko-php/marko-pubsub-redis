@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
+use function Amp\async;
+
 use Amp\Pipeline\DisposedException;
 use Amp\Pipeline\Queue;
 use Amp\Redis\RedisSubscription as AmphpRedisSubscription;
+use Amp\TimeoutCancellation;
 use Marko\PubSub\Message;
 use Marko\PubSub\Redis\Driver\RedisSubscription;
 use Marko\PubSub\Subscription;
@@ -82,6 +85,37 @@ it('delivers a redis message published to a non-first subscribed channel', funct
     expect($messages)->toHaveCount(1)
         ->and($messages[0]->channel)->toBe('second')
         ->and($messages[0]->payload)->toBe('payload-from-second');
+});
+
+it('delivers a message on a later channel while an earlier channel is still open', function (): void {
+    // The first channel never completes, as a live Redis subscription never does
+    $openQueue = new Queue();
+    $firstSub = new AmphpRedisSubscription($openQueue->iterate(), static function (): void {});
+    $secondSub = makeRedisSubscriptionWithMessages(['payload-from-second']);
+    $subscription = new RedisSubscription([$firstSub, $secondSub], 'app:', ['first', 'second']);
+    $iterator = $subscription->getIterator();
+
+    $message = async(static fn (): Message => $iterator->current())
+        ->await(new TimeoutCancellation(1.0));
+
+    expect($message->channel)->toBe('second')
+        ->and($message->payload)->toBe('payload-from-second');
+
+    $subscription->cancel();
+});
+
+it('keeps per-channel order when reading several channels at once', function (): void {
+    $firstSub = makeRedisSubscriptionWithMessages(['a1', 'a2']);
+    $secondSub = makeRedisSubscriptionWithMessages(['b1', 'b2']);
+    $subscription = new RedisSubscription([$firstSub, $secondSub], 'app:', ['a', 'b']);
+
+    $payloads = [];
+
+    foreach ($subscription as $message) {
+        $payloads[$message->channel][] = $message->payload;
+    }
+
+    expect($payloads)->toBe(['a' => ['a1', 'a2'], 'b' => ['b1', 'b2']]);
 });
 
 it('cancels subscription via cancel method', function (): void {
